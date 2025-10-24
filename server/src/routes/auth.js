@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport');
 const { protect } = require('../middleware/auth');
-const { getMe, updateProfile, logout } = require('../controllers/authController');
+const { googleCallback, getMe, updateProfile, logout } = require('../controllers/authController');
 
 // @route   GET /api/auth/google
 // @desc    Initiate Google OAuth
@@ -20,14 +20,10 @@ router.get(
 router.get(
   '/google/callback',
   passport.authenticate('google', { 
-    failureRedirect: 'http://localhost:3000/login?error=auth_failed',
+    failureRedirect: `${process.env.CLIENT_URL}/login?error=auth_failed`,
     session: true
   }),
-  (req, res) => {
-    // Successful authentication, redirect to home
-    console.log('✅ User authenticated:', req.user.email);
-    res.redirect('http://localhost:3000');
-  }
+  googleCallback
 );
 
 // @route   GET /api/auth/me
