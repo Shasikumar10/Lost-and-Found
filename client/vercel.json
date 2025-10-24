@@ -1,8 +1,11 @@
 {
-  "buildCommand": "node node_modules/react-scripts/bin/react-scripts.js build",
+  "buildCommand": "CI=false node node_modules/react-scripts/bin/react-scripts.js build",
   "outputDirectory": "build",
   "installCommand": "npm install --legacy-peer-deps",
   "framework": "create-react-app",
+  "env": {
+    "CI": "false"
+  },
   "rewrites": [
     {
       "source": "/(.*)",
