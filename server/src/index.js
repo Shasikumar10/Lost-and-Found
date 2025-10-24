@@ -15,9 +15,21 @@ connectDB();
 // Passport config
 require('./config/passport')(passport);
 
-// CORS configuration - IMPORTANT for cookies
+// CORS - Allow production URLs
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.CLIENT_URL,
+  'https://your-frontend-url.vercel.app' // Update this after deploying frontend
+].filter(Boolean);
+
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -26,7 +38,10 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session configuration - MUST be before passport
+// Trust proxy (important for production)
+app.set('trust proxy', 1);
+
+// Session configuration
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -39,8 +54,8 @@ app.use(
     cookie: {
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       httpOnly: true,
-      secure: false, // Set to false for localhost
-      sameSite: 'lax'
+      secure: process.env.NODE_ENV === 'production', // true in production
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
     }
   })
 );
@@ -51,7 +66,7 @@ app.use(passport.session());
 
 // Logging middleware for debugging
 app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path}`, req.isAuthenticated ? `- Authenticated: ${req.isAuthenticated()}` : '');
+  console.log(`${req.method} ${req.path}`, req.isAuthenticated ? `- Auth: ${req.isAuthenticated()}` : '');
   next();
 });
 
@@ -65,9 +80,9 @@ app.use('/api/admin', require('./routes/admin'));
 app.get('/api/health', (req, res) => {
   res.json({ 
     success: true, 
-    message: 'KLH Lost and Found API is running',
-    timestamp: new Date(),
-    authenticated: req.isAuthenticated ? req.isAuthenticated() : false
+    message: 'KLH Lost and Found API',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date()
   });
 });
 
@@ -96,7 +111,6 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📝 Environment: ${process.env.NODE_ENV}`);
   console.log(`🌐 Client URL: ${process.env.CLIENT_URL}`);
-  console.log(`📧 Allowed email domain: @${process.env.ALLOWED_EMAIL_DOMAIN}`);
 });
 
 // Handle unhandled promise rejections
