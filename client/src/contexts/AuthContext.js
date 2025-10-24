@@ -15,11 +15,17 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  axios.defaults.baseURL = 'http://localhost:5000/api';
+  // Use same origin in production, localhost in development
+  const API_URL = process.env.NODE_ENV === 'production' 
+    ? '/api'  // Same server
+    : 'http://localhost:5000/api';
+
+  axios.defaults.baseURL = API_URL;
   axios.defaults.withCredentials = true;
 
   useEffect(() => {
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuth = async () => {
@@ -37,8 +43,10 @@ export const AuthProvider = ({ children }) => {
   };
 
   const login = () => {
-    console.log('🔐 Redirecting to Google OAuth...');
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    const backendURL = process.env.NODE_ENV === 'production'
+      ? window.location.origin
+      : 'http://localhost:5000';
+    window.location.href = `${backendURL}/api/auth/google`;
   };
 
   const logout = async () => {
