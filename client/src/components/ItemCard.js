@@ -1,9 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, MapPin, User } from 'lucide-react';
-import { format } from 'date-fns';
 
 const ItemCard = ({ item }) => {
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   const getStatusBadge = () => {
     const badges = {
       active: 'badge-success',
@@ -22,7 +30,7 @@ const ItemCard = ({ item }) => {
     <Link to={`/items/${item._id}`} className="item-card">
       <div className="item-image">
         {item.images && item.images.length > 0 ? (
-          <img src={item.images[0].url} alt={item.title} />
+          <img src={item.images[0].url || item.images[0]} alt={item.title} />
         ) : (
           <div className="no-image">
             <span>📷</span>
@@ -41,12 +49,17 @@ const ItemCard = ({ item }) => {
 
       <div className="item-content">
         <h3 className="item-title">{item.title}</h3>
-        <p className="item-description">{item.description.substring(0, 100)}...</p>
+        <p className="item-description">
+          {item.description.length > 100 
+            ? `${item.description.substring(0, 100)}...` 
+            : item.description
+          }
+        </p>
 
         <div className="item-meta">
           <span className="meta-item">
             <Calendar size={14} />
-            {format(new Date(item.date), 'MMM dd, yyyy')}
+            {formatDate(item.date)}
           </span>
           <span className="meta-item">
             <MapPin size={14} />
