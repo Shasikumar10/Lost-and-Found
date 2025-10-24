@@ -20,11 +20,13 @@ router.get(
 router.get(
   '/google/callback',
   passport.authenticate('google', { 
-    failureRedirect: `${process.env.CLIENT_URL}/login?error=auth_failed` 
+    failureRedirect: 'http://localhost:3000/login?error=auth_failed',
+    session: true
   }),
   (req, res) => {
-    // Successful authentication
-    res.redirect(process.env.CLIENT_URL);
+    // Successful authentication, redirect to home
+    console.log('✅ User authenticated:', req.user.email);
+    res.redirect('http://localhost:3000');
   }
 );
 

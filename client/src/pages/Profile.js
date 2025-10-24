@@ -1,204 +1,111 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Mail, Shield, Bell } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { User, Mail, Shield, Calendar } from 'lucide-react';
+import './Profile.css';
 
 const Profile = () => {
-  const { user, updateUser } = useAuth();
-  const [editing, setEditing] = useState(false);
-  const [formData, setFormData] = useState({
-    name: user?.name || '',
-    notificationPreferences: {
-      email: user?.notificationPreferences?.email ?? true,
-      inApp: user?.notificationPreferences?.inApp ?? true
+  const { user, logout } = useAuth();
+  const [notifications, setNotifications] = useState(
+    user?.notificationPreferences || {
+      email: true,
+      push: false
     }
-  });
+  );
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    
-    if (type === 'checkbox') {
-      setFormData(prev => ({
-        ...prev,
-        notificationPreferences: {
-          ...prev.notificationPreferences,
-          [name]: checked
-        }
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+  const handleNotificationChange = (type) => {
+    setNotifications(prev => ({
+      ...prev,
+      [type]: !prev[type]
+    }));
+    toast.success('Notification preferences updated');
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    try {
-      await updateUser(formData);
-      setEditing(false);
-    } catch (error) {
-      toast.error('Error updating profile');
-    }
-  };
+  if (!user) {
+    return <div className="loading">Loading...</div>;
+  }
 
   return (
     <div className="profile-page">
       <div className="profile-container">
         <div className="profile-header">
-          <h1>Profile Settings</h1>
-          <p>Manage your account information and preferences</p>
+          <img src={user.picture} alt={user.name} className="profile-avatar" />
+          <h1>{user.name}</h1>
+          <p>{user.email}</p>
         </div>
 
-        <div className="profile-content">
-          {/* Profile Info Card */}
-          <div className="profile-card">
-            <div className="profile-avatar-section">
-              {user?.picture ? (
-                <img src={user.picture} alt={user.name} className="profile-avatar-large" />
-              ) : (
-                <div className="profile-avatar-placeholder">
-                  <User size={60} />
-                </div>
-              )}
-              <div className="profile-info-text">
-                <h2>{user?.name}</h2>
-                <p>{user?.email}</p>
-                {user?.role === 'admin' && (
-                  <span className="admin-badge">
-                    <Shield size={14} />
-                    Administrator
-                  </span>
-                )}
+        <div className="profile-info">
+          <h2>Account Information</h2>
+          <div className="info-grid">
+            <div className="info-item">
+              <User size={20} />
+              <div>
+                <label>Name</label>
+                <p>{user.name}</p>
+              </div>
+            </div>
+            <div className="info-item">
+              <Mail size={20} />
+              <div>
+                <label>Email</label>
+                <p>{user.email}</p>
+              </div>
+            </div>
+            <div className="info-item">
+              <Shield size={20} />
+              <div>
+                <label>Role</label>
+                <p className="role-badge">{user.role}</p>
+              </div>
+            </div>
+            <div className="info-item">
+              <Calendar size={20} />
+              <div>
+                <label>Member Since</label>
+                <p>{new Date(user.createdAt).toLocaleDateString()}</p>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Edit Profile Form */}
-          <div className="profile-card">
-            <div className="card-header">
-              <h3>Personal Information</h3>
-              {!editing ? (
-                <button className="btn btn-secondary btn-sm" onClick={() => setEditing(true)}>
-                  Edit
-                </button>
-              ) : (
-                <button className="btn btn-secondary btn-sm" onClick={() => setEditing(false)}>
-                  Cancel
-                </button>
-              )}
-            </div>
-
-            <form onSubmit={handleSubmit} className="profile-form">
-              <div className="form-group">
-                <label className="form-label">
-                  <User size={16} />
-                  Full Name
-                </label>
+        <div className="profile-settings">
+          <h2>Notification Preferences</h2>
+          <div className="settings-list">
+            <div className="setting-item">
+              <div>
+                <h3>Email Notifications</h3>
+                <p>Receive updates via email</p>
+              </div>
+              <label className="toggle">
                 <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  disabled={!editing}
-                  className="form-input"
+                  type="checkbox"
+                  checked={notifications.email}
+                  onChange={() => handleNotificationChange('email')}
                 />
+                <span className="slider"></span>
+              </label>
+            </div>
+            <div className="setting-item">
+              <div>
+                <h3>Push Notifications</h3>
+                <p>Receive browser notifications</p>
               </div>
-
-              <div className="form-group">
-                <label className="form-label">
-                  <Mail size={16} />
-                  Email Address
-                </label>
+              <label className="toggle">
                 <input
-                  type="email"
-                  value={user?.email}
-                  disabled
-                  className="form-input disabled"
+                  type="checkbox"
+                  checked={notifications.push}
+                  onChange={() => handleNotificationChange('push')}
                 />
-                <small className="form-hint">Email cannot be changed</small>
-              </div>
-
-              {editing && (
-                <button type="submit" className="btn btn-primary">
-                  Save Changes
-                </button>
-              )}
-            </form>
-          </div>
-
-          {/* Notification Preferences */}
-          <div className="profile-card">
-            <div className="card-header">
-              <h3>
-                <Bell size={20} />
-                Notification Preferences
-              </h3>
-            </div>
-
-            <form onSubmit={handleSubmit} className="preferences-form">
-              <div className="checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="email"
-                    checked={formData.notificationPreferences.email}
-                    onChange={handleChange}
-                    disabled={!editing}
-                  />
-                  <span>Email Notifications</span>
-                </label>
-                <small>Receive notifications via email</small>
-              </div>
-
-              <div className="checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="inApp"
-                    checked={formData.notificationPreferences.inApp}
-                    onChange={handleChange}
-                    disabled={!editing}
-                  />
-                  <span>In-App Notifications</span>
-                </label>
-                <small>Receive real-time notifications in the app</small>
-              </div>
-
-              {editing && (
-                <button type="submit" className="btn btn-primary">
-                  Save Preferences
-                </button>
-              )}
-            </form>
-          </div>
-
-          {/* Account Stats */}
-          <div className="profile-card">
-            <div className="card-header">
-              <h3>Account Statistics</h3>
-            </div>
-            <div className="stats-list">
-              <div className="stat-item">
-                <span className="stat-label">Member Since</span>
-                <span className="stat-value">
-                  {new Date(user?.createdAt).toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric'
-                  })}
-                </span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Account Status</span>
-                <span className={`stat-value ${user?.isActive ? 'active' : 'inactive'}`}>
-                  {user?.isActive ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-label">Role</span>
-                <span className="stat-value">{user?.role}</span>
-              </div>
+                <span className="slider"></span>
+              </label>
             </div>
           </div>
+        </div>
+
+        <div className="profile-actions">
+          <button onClick={logout} className="btn-logout">
+            Logout
+          </button>
         </div>
       </div>
     </div>

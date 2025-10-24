@@ -1,91 +1,71 @@
 const mongoose = require('mongoose');
 
 const itemSchema = new mongoose.Schema({
-  userId: {
+  title: {
+    type: String,
+    required: [true, 'Please provide a title'],
+    trim: true,
+    maxlength: [100, 'Title cannot be more than 100 characters']
+  },
+  description: {
+    type: String,
+    required: [true, 'Please provide a description'],
+    maxlength: [1000, 'Description cannot be more than 1000 characters']
+  },
+  type: {
+    type: String,
+    required: true,
+    enum: ['lost', 'found'],
+    lowercase: true
+  },
+  category: {
+    type: String,
+    required: [true, 'Please select a category'],
+    enum: [
+      'Electronics',
+      'Documents',
+      'Accessories',
+      'Clothing',
+      'Books',
+      'Keys',
+      'Other'
+    ]
+  },
+  location: {
+    type: String,
+    required: [true, 'Please provide a location']
+  },
+  date: {
+    type: Date,
+    required: [true, 'Please provide a date']
+  },
+  images: [{
+    type: String
+  }],
+  status: {
+    type: String,
+    enum: ['active', 'claimed', 'returned', 'closed'],
+    default: 'active'
+  },
+  reportedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  title: {
-    type: String,
-    required: [true, 'Title is required'],
-    trim: true,
-    maxlength: [100, 'Title cannot exceed 100 characters']
+  claimedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   },
-  description: {
-    type: String,
-    required: [true, 'Description is required'],
-    trim: true,
-    maxlength: [1000, 'Description cannot exceed 1000 characters']
-  },
-  type: {
-    type: String,
-    enum: ['lost', 'found'],
-    required: [true, 'Type is required']
-  },
-  category: {
-    type: String,
-    enum: [
-      'electronics',
-      'clothing',
-      'accessories',
-      'documents',
-      'books',
-      'keys',
-      'bags',
-      'sports',
-      'jewelry',
-      'other'
-    ],
-    required: [true, 'Category is required']
-  },
-  location: {
-    type: String,
-    required: [true, 'Location is required'],
-    trim: true
-  },
-  date: {
-    type: Date,
-    required: [true, 'Date is required']
-  },
-  images: [{
-    url: {
-      type: String,
-      required: true
-    },
-    publicId: {
-      type: String,
-      required: true
-    }
-  }],
-  tags: [{
-    type: String,
-    trim: true,
-    lowercase: true
-  }],
-  status: {
-    type: String,
-    enum: ['active', 'claimed', 'resolved', 'expired'],
-    default: 'active'
-  },
-  claimCount: {
-    type: Number,
-    default: 0
+  claimApprovedAt: {
+    type: Date
   }
 }, {
   timestamps: true
 });
 
-itemSchema.index({ userId: 1 });
+// Add index for better search performance
+itemSchema.index({ title: 'text', description: 'text' });
 itemSchema.index({ type: 1, status: 1 });
-itemSchema.index({ category: 1 });
-itemSchema.index({ createdAt: -1 });
-itemSchema.index({ title: 'text', description: 'text', tags: 'text' });
-
-itemSchema.virtual('claims', {
-  ref: 'Claim',
-  localField: '_id',
-  foreignField: 'itemId'
-});
+itemSchema.index({ reportedBy: 1 });
 
 module.exports = mongoose.model('Item', itemSchema);

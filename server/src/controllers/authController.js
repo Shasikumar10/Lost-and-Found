@@ -30,65 +30,75 @@ exports.googleCallback = async (req, res) => {
 
 // @desc    Get current user
 // @route   GET /api/auth/me
+// @access  Private
 exports.getMe = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).select('-__v');
+    const user = await User.findById(req.user.id).select('-googleId');
+    
     res.json({
       success: true,
       data: user
     });
   } catch (error) {
+    console.error('Get Me Error:', error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching user data'
+      message: 'Server error'
+    });
+  }
+};
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+exports.updateProfile = async (req, res) => {
+  try {
+    const { notificationPreferences } = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { notificationPreferences },
+      { new: true, runValidators: true }
+    ).select('-googleId');
+
+    res.json({
+      success: true,
+      data: user
+    });
+  } catch (error) {
+    console.error('Update Profile Error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
     });
   }
 };
 
 // @desc    Logout user
 // @route   POST /api/auth/logout
+// @access  Private
 exports.logout = (req, res) => {
   req.logout((err) => {
     if (err) {
       return res.status(500).json({
         success: false,
-        message: 'Error logging out'
+        message: 'Logout failed'
       });
     }
-    res.clearCookie('token');
-    res.json({
-      success: true,
-      message: 'Logged out successfully'
+    
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          message: 'Session destruction failed'
+        });
+      }
+      
+      res.clearCookie('connect.sid');
+      res.json({
+        success: true,
+        message: 'Logged out successfully'
+      });
     });
   });
-};
-
-// @desc    Update user profile
-// @route   PUT /api/auth/profile
-exports.updateProfile = async (req, res) => {
-  try {
-    const { name, notificationPreferences } = req.body;
-    
-    const user = await User.findById(req.user._id);
-    
-    if (name) user.name = name;
-    if (notificationPreferences) {
-      user.notificationPreferences = {
-        ...user.notificationPreferences,
-        ...notificationPreferences
-      };
-    }
-    
-    await user.save();
-    
-    res.json({
-      success: true,
-      data: user
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Error updating profile'
-    });
-  }
 };

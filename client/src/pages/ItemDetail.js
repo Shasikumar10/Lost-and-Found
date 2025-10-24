@@ -1,71 +1,66 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { itemsAPI, claimsAPI } from '../api/api';
-import Modal from '../components/common/Modal';
-import { Calendar, MapPin, User, Tag, Edit, Trash2, Flag } from 'lucide-react';
-import { format } from 'date-fns';
+import axios from 'axios';
+import { MapPin, Calendar, Tag, Edit, Trash2, Flag } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { format } from 'date-fns';
+import './ItemDetail.css';
 
 const ItemDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useAuth();
+  const { user } = useAuth();
   const [item, setItem] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showClaimModal, setShowClaimModal] = useState(false);
   const [claimDescription, setClaimDescription] = useState('');
-  const [claimImages, setClaimImages] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [proofImages, setProofImages] = useState([]);
 
   useEffect(() => {
     fetchItem();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchItem = async () => {
     try {
-      const { data } = await itemsAPI.getItem(id);
-      setItem(data.data);
+      const response = await axios.get(`/items/${id}`);
+      setItem(response.data.data);
     } catch (error) {
-      toast.error('Error fetching item details');
-      navigate('/browse');
+      console.error('Error fetching item:', error);
+      toast.error('Failed to load item details');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClaimSubmit = async (e) => {
+  const handleClaim = async (e) => {
     e.preventDefault();
-
-    if (claimDescription.trim().length < 10) {
-      toast.error('Description must be at least 10 characters');
+    
+    if (!claimDescription.trim()) {
+      toast.error('Please provide a description');
       return;
     }
 
-    setSubmitting(true);
-    const toastId = toast.loading('Submitting claim...');
+    const formData = new FormData();
+    formData.append('itemId', id);
+    formData.append('description', claimDescription);
+    
+    proofImages.forEach((file) => {
+      formData.append('proofImages', file);
+    });
 
     try {
-      const formData = new FormData();
-      formData.append('itemId', item._id);
-      formData.append('description', claimDescription);
-
-      claimImages.forEach(image => {
-        formData.append('proofImages', image);
+      await axios.post('/claims', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
-
-      await claimsAPI.createClaim(formData);
-      
-      toast.success('Claim submitted successfully!', { id: toastId });
+      toast.success('Claim submitted successfully!');
       setShowClaimModal(false);
       setClaimDescription('');
-      setClaimImages([]);
-      fetchItem();
+      setProofImages([]);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error submitting claim', { id: toastId });
-    } finally {
-      setSubmitting(false);
+      console.error('Error submitting claim:', error);
+      toast.error(error.response?.data?.message || 'Failed to submit claim');
     }
   };
 
@@ -74,230 +69,184 @@ const ItemDetail = () => {
       return;
     }
 
-    const toastId = toast.loading('Deleting item...');
-
     try {
-      await itemsAPI.deleteItem(item._id);
-      toast.success('Item deleted successfully', { id: toastId });
+      await axios.delete(`/items/${id}`);
+      toast.success('Item deleted successfully');
       navigate('/my-items');
     } catch (error) {
-      toast.error('Error deleting item', { id: toastId });
+      console.error('Error deleting item:', error);
+      toast.error('Failed to delete item');
     }
-  };
-
-  const handleImageChange = (e) => {
-    const files = Array.from(e.target.files);
-    if (claimImages.length + files.length > 3) {
-      toast.error('Maximum 3 proof images allowed');
-      return;
-    }
-    setClaimImages(prev => [...prev, ...files]);
   };
 
   if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Loading item details...</p>
-      </div>
-    );
+    return <div className="loading">Loading...</div>;
   }
 
   if (!item) {
-    return (
-      <div className="error-container">
-        <p>Item not found</p>
-      </div>
-    );
+    return <div className="error">Item not found</div>;
   }
 
-  const isOwner = user && item.userId._id === user._id;
-  const canClaim = isAuthenticated && !isOwner && item.status === 'active';
+  const isOwner = user && user._id === item.reportedBy._id;
+  const canClaim = user && !isOwner && item.status === 'active';
 
   return (
-    <div className="item-detail-page">
-      <div className="detail-container">
-        {/* Image Gallery */}
-        <div className="detail-images">
-          {item.images && item.images.length > 0 ? (
-            <>
-              <div className="main-image">
-                <img src={item.images[currentImageIndex].url} alt={item.title} />
+    <div className="item-detail">
+      <div className="item-detail-container">
+        <div className="item-header">
+          <div className="item-header-top">
+            <div>
+              <h1 className="item-title">{item.title}</h1>
+              <div className="item-meta">
+                <span className="meta-item">
+                  <MapPin /> {item.location}
+                </span>
+                <span className="meta-item">
+                  <Calendar /> {format(new Date(item.date), 'PPP')}
+                </span>
+                <span className="meta-item">
+                  <Tag /> {item.category}
+                </span>
               </div>
-              {item.images.length > 1 && (
-                <div className="image-thumbnails">
-                  {item.images.map((img, index) => (
-                    <button
-                      key={index}
-                      className={`thumbnail ${index === currentImageIndex ? 'active' : ''}`}
-                      onClick={() => setCurrentImageIndex(index)}
-                    >
-                      <img src={img.url} alt={`${item.title} ${index + 1}`} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="no-image-placeholder">
-              <span>📷</span>
-              <p>No images available</p>
             </div>
-          )}
-        </div>
-
-        {/* Item Details */}
-        <div className="detail-content">
-          <div className="detail-header">
-            <div className="detail-badges">
-              <span className={`badge ${item.type === 'lost' ? 'badge-lost' : 'badge-found'}`}>
-                {item.type.toUpperCase()}
-              </span>
-              <span className={`badge badge-${item.status}`}>
-                {item.status}
-              </span>
-            </div>
-
+            
             {isOwner && (
-              <div className="owner-actions">
-                <button className="icon-btn" onClick={() => navigate(`/edit-item/${item._id}`)}>
-                  <Edit size={18} />
+              <div className="action-buttons">
+                <button 
+                  className="btn btn-secondary"
+                  onClick={() => navigate(`/items/${id}/edit`)}
+                >
+                  <Edit size={16} /> Edit
                 </button>
-                <button className="icon-btn danger" onClick={handleDelete}>
-                  <Trash2 size={18} />
+                <button 
+                  className="btn btn-danger"
+                  onClick={handleDelete}
+                >
+                  <Trash2 size={16} /> Delete
                 </button>
               </div>
             )}
           </div>
+        </div>
 
-          <h1 className="detail-title">{item.title}</h1>
-
-          <div className="detail-meta">
-            <div className="meta-item">
-              <Calendar size={16} />
-              <span>{format(new Date(item.date), 'MMMM dd, yyyy')}</span>
-            </div>
-            <div className="meta-item">
-              <MapPin size={16} />
-              <span>{item.location}</span>
-            </div>
-            <div className="meta-item">
-              <Tag size={16} />
-              <span>{item.category}</span>
-            </div>
-          </div>
-
-          <div className="detail-section">
-            <h3>Description</h3>
-            <p className="description-text">{item.description}</p>
-          </div>
-
-          {item.tags && item.tags.length > 0 && (
-            <div className="detail-section">
-              <h3>Tags</h3>
-              <div className="tag-list">
-                {item.tags.map((tag, index) => (
-                  <span key={index} className="tag">{tag}</span>
+        <div className="item-body">
+          {item.images && item.images.length > 0 && (
+            <div className="item-images">
+              <div className="image-grid">
+                {item.images.map((image, index) => (
+                  <img
+                    key={index}
+                    src={image}
+                    alt={`${item.title} ${index + 1}`}
+                    className="item-image"
+                  />
                 ))}
               </div>
             </div>
           )}
 
-          <div className="detail-section">
-            <h3>Posted By</h3>
-            <div className="user-info">
-              {item.userId.picture && (
-                <img src={item.userId.picture} alt={item.userId.name} className="user-avatar" />
-              )}
-              <div>
-                <p className="user-name">{item.userId.name}</p>
-                <p className="user-email">{item.userId.email}</p>
+          <div className="item-info">
+            <div>
+              <div className="info-section">
+                <h3>Description</h3>
+                <p>{item.description}</p>
+              </div>
+
+              <div className="info-section">
+                <h3>Details</h3>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <span className="info-label">Type:</span>
+                    <span className="info-value">{item.type}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Category:</span>
+                    <span className="info-value">{item.category}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Status:</span>
+                    <span className="info-value">{item.status}</span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Reported by:</span>
+                    <span className="info-value">{item.reportedBy.name}</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {item.claimCount > 0 && (
-            <div className="claim-count-info">
-              <Flag size={16} />
-              <span>{item.claimCount} {item.claimCount === 1 ? 'claim' : 'claims'} submitted</span>
+            <div className="item-sidebar">
+              {canClaim && (
+                <>
+                  <button
+                    className="claim-button"
+                    onClick={() => setShowClaimModal(true)}
+                  >
+                    <Flag size={18} /> Claim This Item
+                  </button>
+                  <p style={{ fontSize: '0.875rem', color: '#718096' }}>
+                    Found this item? Submit a claim with proof to get it back.
+                  </p>
+                </>
+              )}
+
+              {isOwner && (
+                <div style={{ padding: '1rem', background: '#dbeafe', borderRadius: '8px' }}>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#2563eb' }}>
+                    You reported this item
+                  </p>
+                </div>
+              )}
             </div>
-          )}
-
-          {canClaim && (
-            <button 
-              className="btn btn-primary btn-large claim-btn"
-              onClick={() => setShowClaimModal(true)}
-            >
-              Claim This Item
-            </button>
-          )}
-
-          {isOwner && item.claimCount > 0 && (
-            <button 
-              className="btn btn-secondary btn-large"
-              onClick={() => navigate(`/claims?item=${item._id}`)}
-            >
-              View Claims ({item.claimCount})
-            </button>
-          )}
+          </div>
         </div>
       </div>
 
       {/* Claim Modal */}
-      <Modal
-        isOpen={showClaimModal}
-        onClose={() => setShowClaimModal(false)}
-        title="Claim Item"
-      >
-        <form onSubmit={handleClaimSubmit} className="claim-form">
-          <div className="form-group">
-            <label className="form-label">
-              Describe why this item belongs to you
-            </label>
-            <textarea
-              value={claimDescription}
-              onChange={(e) => setClaimDescription(e.target.value)}
-              placeholder="Provide specific details to verify ownership..."
-              rows="5"
-              className="form-textarea"
-              required
-            />
+      {showClaimModal && (
+        <div className="modal-overlay" onClick={() => setShowClaimModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Claim This Item</h2>
+            </div>
+            <form onSubmit={handleClaim}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label>Description *</label>
+                  <textarea
+                    rows="4"
+                    value={claimDescription}
+                    onChange={(e) => setClaimDescription(e.target.value)}
+                    placeholder="Describe why this item belongs to you..."
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Proof Images (Optional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => setProofImages(Array.from(e.target.files))}
+                  />
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setShowClaimModal(false)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary">
+                  Submit Claim
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="form-group">
-            <label className="form-label">
-              Upload Proof (optional, max 3 images)
-            </label>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={handleImageChange}
-              className="form-input"
-            />
-            {claimImages.length > 0 && (
-              <p className="form-hint">{claimImages.length} image(s) selected</p>
-            )}
-          </div>
-
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setShowClaimModal(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={submitting}
-            >
-              {submitting ? 'Submitting...' : 'Submit Claim'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+        </div>
+      )}
     </div>
   );
 };

@@ -34,7 +34,8 @@ const BrowseItems = () => {
 
   useEffect(() => {
     fetchItems();
-  }, [filters, pagination.currentPage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters]);
 
   const fetchItems = async () => {
     try {

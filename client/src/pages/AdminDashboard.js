@@ -13,6 +13,10 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+import './AdminDashboard.css';
 
 // Admin Dashboard Overview
 const AdminOverview = () => {
@@ -240,6 +244,14 @@ const AdminClaims = () => {
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('pending');
+  const [activeTab, setActiveTab] = useState('pending');
+
+  useEffect(() => {
+    if (activeTab === 'claims') {
+      fetchClaims();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   useEffect(() => {
     fetchClaims();

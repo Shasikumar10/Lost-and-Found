@@ -1,52 +1,55 @@
+const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*\.\w{2,}$/;
+
 export const validateEmail = (email) => {
-  const regex = /^[\w-\.]+@klh\.edu\.in$/;
-  return regex.test(email);
+  if (!email) return 'Email is required';
+  if (!emailRegex.test(email)) return 'Invalid email format';
+  return '';
 };
 
-export const validateItemForm = (data) => {
+export const validateItemForm = (formData) => {
   const errors = {};
 
-  if (!data.title || data.title.trim().length < 3) {
-    errors.title = 'Title must be at least 3 characters';
+  if (!formData.title?.trim()) {
+    errors.title = 'Title is required';
+  } else if (formData.title.length > 100) {
+    errors.title = 'Title must be less than 100 characters';
   }
 
-  if (!data.description || data.description.trim().length < 10) {
-    errors.description = 'Description must be at least 10 characters';
+  if (!formData.description?.trim()) {
+    errors.description = 'Description is required';
+  } else if (formData.description.length > 1000) {
+    errors.description = 'Description must be less than 1000 characters';
   }
 
-  if (!data.category) {
-    errors.category = 'Category is required';
-  }
-
-  if (!data.location || data.location.trim().length === 0) {
-    errors.location = 'Location is required';
-  }
-
-  if (!data.date) {
-    errors.date = 'Date is required';
-  }
-
-  if (!data.type) {
+  if (!formData.type) {
     errors.type = 'Type is required';
   }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
-};
-
-export const validateClaimForm = (data) => {
-  const errors = {};
-
-  if (!data.description || data.description.trim().length < 10) {
-    errors.description = 'Description must be at least 10 characters';
+  if (!formData.category) {
+    errors.category = 'Category is required';
   }
 
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
+  if (!formData.location?.trim()) {
+    errors.location = 'Location is required';
+  }
+
+  if (!formData.date) {
+    errors.date = 'Date is required';
+  }
+
+  return errors;
+};
+
+export const validateClaimForm = (formData) => {
+  const errors = {};
+
+  if (!formData.description?.trim()) {
+    errors.description = 'Description is required';
+  } else if (formData.description.length > 1000) {
+    errors.description = 'Description must be less than 1000 characters';
+  }
+
+  return errors;
 };
 
 export const validateFileSize = (file, maxSizeMB = 5) => {

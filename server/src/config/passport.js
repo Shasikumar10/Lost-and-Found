@@ -13,11 +13,14 @@ module.exports = (passport) => {
       async (accessToken, refreshToken, profile, done) => {
         try {
           const email = profile.emails[0].value;
+          
+          console.log('🔐 Login attempt with email:', email);
 
           // Check if email is from allowed domain
           if (!email.endsWith(`@${process.env.ALLOWED_EMAIL_DOMAIN}`)) {
+            console.log('❌ Email domain not allowed:', email);
             return done(null, false, {
-              message: `Only ${process.env.ALLOWED_EMAIL_DOMAIN} emails are allowed`
+              message: `Only @${process.env.ALLOWED_EMAIL_DOMAIN} emails are allowed`
             });
           }
 
@@ -28,6 +31,7 @@ module.exports = (passport) => {
             // Update last login
             user.lastLogin = new Date();
             await user.save();
+            console.log('✅ Existing user logged in:', email);
             return done(null, user);
           }
 
@@ -40,9 +44,10 @@ module.exports = (passport) => {
             lastLogin: new Date()
           });
 
+          console.log('✅ New user created:', email);
           done(null, user);
         } catch (error) {
-          console.error('Google Strategy Error:', error);
+          console.error('❌ Google Strategy Error:', error);
           done(error, null);
         }
       }
@@ -50,14 +55,17 @@ module.exports = (passport) => {
   );
 
   passport.serializeUser((user, done) => {
+    console.log('📝 Serializing user:', user.email);
     done(null, user.id);
   });
 
   passport.deserializeUser(async (id, done) => {
     try {
       const user = await User.findById(id);
+      console.log('📖 Deserializing user:', user?.email);
       done(null, user);
     } catch (error) {
+      console.error('❌ Deserialize Error:', error);
       done(error, null);
     }
   });

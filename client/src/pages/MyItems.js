@@ -1,133 +1,122 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { itemsAPI } from '../api/api';
-import ItemCard from '../components/ItemCard';
-import { Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import toast from 'react-hot-toast';
+import { Calendar, MapPin, Eye, Edit, Trash2 } from 'lucide-react';
+import './MyItems.css';
 
 const MyItems = () => {
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     fetchMyItems();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchMyItems = async () => {
     try {
-      setLoading(true);
-      const { data } = await itemsAPI.getMyItems();
-      setItems(data.data);
+      const response = await axios.get('/items/my/items');
+      setItems(response.data.data);
     } catch (error) {
-      toast.error('Error fetching your items');
+      console.error('Error fetching items:', error);
+      toast.error('Failed to load your items');
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredItems = items.filter(item => {
-    if (filter === 'all') return true;
-    if (filter === 'lost') return item.type === 'lost';
-    if (filter === 'found') return item.type === 'found';
-    return item.status === filter;
-  });
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this item?')) {
+      return;
+    }
 
-  const stats = {
-    total: items.length,
-    active: items.filter(i => i.status === 'active').length,
-    claimed: items.filter(i => i.status === 'claimed').length,
-    resolved: items.filter(i => i.status === 'resolved').length
+    try {
+      await axios.delete(`/items/${id}`);
+      toast.success('Item deleted successfully');
+      fetchMyItems();
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      toast.error('Failed to delete item');
+    }
   };
 
+  const filteredItems = items.filter(item => {
+    if (filter === 'all') return true;
+    return item.type === filter;
+  });
+
   if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="spinner"></div>
-        <p>Loading your items...</p>
-      </div>
-    );
+    return <div className="loading">Loading...</div>;
   }
 
   return (
-    <div className="my-items-page">
-      <div className="page-header">
-        <div>
-          <h1>My Items</h1>
-          <p>Manage your reported lost and found items</p>
-        </div>
-        <Link to="/report" className="btn btn-primary">
-          <Plus size={20} />
+    <div className="my-items">
+      <div className="my-items-header">
+        <h1>My Items</h1>
+        <button onClick={() => navigate('/report')} className="btn-primary">
           Report New Item
-        </Link>
+        </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <h3>{stats.total}</h3>
-          <p>Total Items</p>
-        </div>
-        <div className="stat-card">
-          <h3>{stats.active}</h3>
-          <p>Active</p>
-        </div>
-        <div className="stat-card">
-          <h3>{stats.claimed}</h3>
-          <p>Claimed</p>
-        </div>
-        <div className="stat-card">
-          <h3>{stats.resolved}</h3>
-          <p>Resolved</p>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="filter-tabs">
-        <button
-          className={`tab ${filter === 'all' ? 'active' : ''}`}
+      <div className="filters">
+        <button 
+          className={filter === 'all' ? 'active' : ''} 
           onClick={() => setFilter('all')}
         >
-          All
+          All ({items.length})
         </button>
-        <button
-          className={`tab ${filter === 'lost' ? 'active' : ''}`}
+        <button 
+          className={filter === 'lost' ? 'active' : ''} 
           onClick={() => setFilter('lost')}
         >
-          Lost
+          Lost ({items.filter(i => i.type === 'lost').length})
         </button>
-        <button
-          className={`tab ${filter === 'found' ? 'active' : ''}`}
+        <button 
+          className={filter === 'found' ? 'active' : ''} 
           onClick={() => setFilter('found')}
         >
-          Found
-        </button>
-        <button
-          className={`tab ${filter === 'active' ? 'active' : ''}`}
-          onClick={() => setFilter('active')}
-        >
-          Active
-        </button>
-        <button
-          className={`tab ${filter === 'claimed' ? 'active' : ''}`}
-          onClick={() => setFilter('claimed')}
-        >
-          Claimed
+          Found ({items.filter(i => i.type === 'found').length})
         </button>
       </div>
 
-      {/* Items Grid */}
       {filteredItems.length === 0 ? (
-        <div className="no-items">
+        <div className="empty-state">
           <p>No items found</p>
-          <Link to="/report" className="btn btn-primary">
+          <button onClick={() => navigate('/report')} className="btn-primary">
             Report Your First Item
-          </Link>
+          </button>
         </div>
       ) : (
         <div className="items-grid">
           {filteredItems.map(item => (
-            <ItemCard key={item._id} item={item} />
+            <div key={item._id} className="item-card">
+              {item.images?.[0] && (
+                <img src={item.images[0]} alt={item.title} className="item-image" />
+              )}
+              <div className="item-content">
+                <span className={`badge ${item.type}`}>{item.type}</span>
+                <h3>{item.title}</h3>
+                <p className="item-description">{item.description}</p>
+                <div className="item-meta">
+                  <span><MapPin size={14} /> {item.location}</span>
+                  <span><Calendar size={14} /> {new Date(item.date).toLocaleDateString()}</span>
+                </div>
+                <div className="item-actions">
+                  <button onClick={() => navigate(`/items/${item._id}`)} className="btn-icon">
+                    <Eye size={16} /> View
+                  </button>
+                  <button onClick={() => navigate(`/items/${item._id}/edit`)} className="btn-icon">
+                    <Edit size={16} /> Edit
+                  </button>
+                  <button onClick={() => handleDelete(item._id)} className="btn-icon danger">
+                    <Trash2 size={16} /> Delete
+                  </button>
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       )}
