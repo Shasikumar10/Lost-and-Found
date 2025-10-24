@@ -1,6 +1,7 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "node node_modules/react-scripts/bin/react-scripts.js build",
   "outputDirectory": "build",
+  "installCommand": "npm install --legacy-peer-deps",
   "framework": "create-react-app",
   "rewrites": [
     {
