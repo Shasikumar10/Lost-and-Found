@@ -16,8 +16,7 @@ const Login = () => {
   }, [user, navigate]);
 
   const handleGoogleLogin = () => {
-    console.log('Login button clicked!');
-    login();
+    window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
   };
 
   if (loading) {
