@@ -13,23 +13,32 @@ const claimSchema = new mongoose.Schema({
   },
   description: {
     type: String,
-    required: true
+    required: [true, 'Description is required'],
+    trim: true,
+    maxlength: [1000, 'Description cannot exceed 1000 characters']
   },
   proofImages: [{
-    url: String,
-    publicId: String
+    url: {
+      type: String,
+      required: true
+    },
+    publicId: {
+      type: String,
+      required: true
+    }
   }],
   status: {
     type: String,
     enum: ['pending', 'approved', 'rejected', 'disputed'],
     default: 'pending'
   },
+  reviewNote: {
+    type: String,
+    trim: true
+  },
   reviewedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
-  },
-  reviewNote: {
-    type: String
   },
   reviewedAt: {
     type: Date
@@ -37,5 +46,11 @@ const claimSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+claimSchema.index({ itemId: 1 });
+claimSchema.index({ claimantId: 1 });
+claimSchema.index({ status: 1 });
+claimSchema.index({ createdAt: -1 });
+claimSchema.index({ itemId: 1, claimantId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Claim', claimSchema);

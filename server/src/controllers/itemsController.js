@@ -19,7 +19,6 @@ exports.getItems = async (req, res) => {
       limit = 12
     } = req.query;
 
-    // Build query
     let query = {};
 
     if (search) {
@@ -41,7 +40,6 @@ exports.getItems = async (req, res) => {
       if (endDate) query.date.$lte = new Date(endDate);
     }
 
-    // Execute query with pagination
     const items = await Item.find(query)
       .populate('userId', 'name email picture')
       .sort({ createdAt: -1 })
@@ -105,7 +103,6 @@ exports.createItem = async (req, res) => {
   try {
     const { title, description, type, category, location, date, tags } = req.body;
 
-    // Upload images to Cloudinary
     const imageUrls = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -123,7 +120,6 @@ exports.createItem = async (req, res) => {
             publicId: result.public_id
           });
 
-          // Delete local file
           await fs.unlink(file.path);
         } catch (uploadError) {
           console.error('Image upload error:', uploadError);
@@ -131,7 +127,6 @@ exports.createItem = async (req, res) => {
       }
     }
 
-    // Parse tags
     let parsedTags = [];
     if (tags) {
       parsedTags = typeof tags === 'string' 
@@ -163,7 +158,6 @@ exports.createItem = async (req, res) => {
   } catch (error) {
     console.error('Create item error:', error);
     
-    // Clean up uploaded files on error
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
         try {
@@ -195,7 +189,6 @@ exports.updateItem = async (req, res) => {
       });
     }
 
-    // Check ownership
     if (item.userId.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -205,7 +198,6 @@ exports.updateItem = async (req, res) => {
 
     const { title, description, category, location, date, tags, status } = req.body;
 
-    // Parse tags
     let parsedTags = item.tags;
     if (tags) {
       parsedTags = typeof tags === 'string'
@@ -213,7 +205,6 @@ exports.updateItem = async (req, res) => {
         : tags;
     }
 
-    // Update fields
     item.title = title || item.title;
     item.description = description || item.description;
     item.category = category || item.category;
@@ -222,7 +213,6 @@ exports.updateItem = async (req, res) => {
     item.tags = parsedTags;
     item.status = status || item.status;
 
-    // Handle new images
     if (req.files && req.files.length > 0) {
       const imageUrls = [];
       for (const file of req.files) {
@@ -282,7 +272,6 @@ exports.deleteItem = async (req, res) => {
       });
     }
 
-    // Check ownership or admin
     if (item.userId.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({
         success: false,
@@ -290,7 +279,6 @@ exports.deleteItem = async (req, res) => {
       });
     }
 
-    // Delete images from Cloudinary
     if (item.images && item.images.length > 0) {
       for (const image of item.images) {
         try {

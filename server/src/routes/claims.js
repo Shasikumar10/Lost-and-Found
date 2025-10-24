@@ -1,38 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const multer = require('multer');
 const { protect } = require('../middlewares/auth');
+const upload = require('../middleware/upload');
 const {
   createClaim,
-  getClaimsByItem,
   getMyClaims,
+  getClaimsByItem,
   updateClaimStatus,
-  deleteClaim
+  getClaim
 } = require('../controllers/claimsController');
 
-// Configure multer
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'), false);
-    }
-  }
-});
+// @route   POST /api/claims
+// @desc    Create new claim
+// @access  Private
+router.post('/', protect, upload.array('proofImages', 5), createClaim);
 
-// All routes are protected
-router.use(protect);
+// @route   GET /api/claims/my
+// @desc    Get user's claims
+// @access  Private
+router.get('/my', protect, getMyClaims);
 
-router.post('/', upload.array('proofImages', 3), createClaim);
-router.get('/item/:itemId', getClaimsByItem);
-router.get('/my', getMyClaims);
-router.put('/:id/status', updateClaimStatus);
-router.delete('/:id', deleteClaim);
+// @route   GET /api/claims/item/:itemId
+// @desc    Get claims for specific item
+// @access  Private
+router.get('/item/:itemId', protect, getClaimsByItem);
+
+// @route   GET /api/claims/:id
+// @desc    Get single claim
+// @access  Private
+router.get('/:id', protect, getClaim);
+
+// @route   PUT /api/claims/:id/status
+// @desc    Update claim status
+// @access  Private
+router.put('/:id/status', protect, updateClaimStatus);
 
 module.exports = router;

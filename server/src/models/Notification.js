@@ -8,16 +8,25 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['claim_submitted', 'claim_approved', 'claim_rejected', 'item_claimed', 'admin_message'],
+    enum: ['claim', 'claim_update', 'item_update', 'system'],
     required: true
   },
   title: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   message: {
     type: String,
-    required: true
+    required: true,
+    trim: true
+  },
+  link: {
+    type: String
+  },
+  isRead: {
+    type: Boolean,
+    default: false
   },
   relatedItem: {
     type: mongoose.Schema.Types.ObjectId,
@@ -26,13 +35,12 @@ const notificationSchema = new mongoose.Schema({
   relatedClaim: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Claim'
-  },
-  isRead: {
-    type: Boolean,
-    default: false
   }
 }, {
   timestamps: true
 });
+
+notificationSchema.index({ userId: 1, isRead: 1 });
+notificationSchema.index({ createdAt: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

@@ -3,19 +3,20 @@ const mongoose = require('mongoose');
 const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
-    unique: true,
-    sparse: true
+    required: true,
+    unique: true
   },
   email: {
     type: String,
     required: true,
     unique: true,
     lowercase: true,
-    match: [/^[\w-\.]+@klh\.edu\.in$/, 'Please use a valid @klh.edu.in email']
+    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
   },
   name: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   picture: {
     type: String
@@ -30,11 +31,24 @@ const userSchema = new mongoose.Schema({
     default: true
   },
   notificationPreferences: {
-    email: { type: Boolean, default: true },
-    inApp: { type: Boolean, default: true }
+    email: {
+      type: Boolean,
+      default: true
+    },
+    push: {
+      type: Boolean,
+      default: true
+    }
+  },
+  lastLogin: {
+    type: Date,
+    default: Date.now
   }
 }, {
   timestamps: true
 });
+
+userSchema.index({ email: 1 });
+userSchema.index({ googleId: 1 });
 
 module.exports = mongoose.model('User', userSchema);
