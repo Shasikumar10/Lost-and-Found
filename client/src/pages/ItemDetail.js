@@ -4,7 +4,6 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import { MapPin, Calendar, Tag, Edit, Trash2, Flag } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { format } from 'date-fns';
 import './ItemDetail.css';
 
 const ItemDetail = () => {
@@ -32,6 +31,15 @@ const ItemDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   const handleClaim = async (e) => {
@@ -102,7 +110,7 @@ const ItemDetail = () => {
                   <MapPin /> {item.location}
                 </span>
                 <span className="meta-item">
-                  <Calendar /> {format(new Date(item.date), 'PPP')}
+                  <Calendar /> {formatDate(item.date)}
                 </span>
                 <span className="meta-item">
                   <Tag /> {item.category}
